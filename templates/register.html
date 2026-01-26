@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Регистрация в системе</h4>
+            </div>
+            <div class="card-body">
+                
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        <div class="alert alert-danger">
+                            {{ messages[0] }}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Логин</label>
+                        <input type="text" class="form-control" name="username" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Пароль</label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="role" class="form-label">Роль</label>
+                        <select class="form-select" name="role">
+                            <option value="student">Студент</option>
+                            <option value="teacher">Преподаватель</option>
+                            <option value="admin">Администратор</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100">Зарегистрироваться</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

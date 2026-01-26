@@ -1,10 +1,14 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from flask import Flask, render_template
+from flask_sqlalchemy import SQLAlchemy
+from flask import request, redirect, url_for, flash
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Инициализация приложения
 app = Flask(__name__)
-
+app.config['SECRET_KEY'] = 'moi_sekretny_klyuch_dlya_diploma'
 # Настройка базы данных
 # Создание файл cinema.db прямо в папке проекта
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///cinema.db'
@@ -41,6 +45,37 @@ class Equipment(db.Model):
     name = db.Column(db.String(100), nullable=False) # Например: "Камера Sony A7"
     type = db.Column(db.String(50), nullable=False)  # 'camera', 'light', 'prop' (реквизит)
     is_broken = db.Column(db.Boolean, default=False) # Состояние техники [cite: 14]
+
+# --- МАРШРУТЫ (ROUTES) ---
+@app.route('/')
+def index():
+    # Эта функция ищет файл index.html в папке templates
+    return render_template('index.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        # 1. Получаем данные из формы
+        username = request.form['username']
+        password = request.form['password']
+        role = request.form['role'] # 'student' или 'teacher'
+
+        # 2. Проверяем, нет ли уже такого пользователя
+        user = User.query.filter_by(username=username).first()
+        if user:
+            flash('Такой пользователь уже существует')
+            return redirect(url_for('register'))
+
+        # 3. Хешируем пароль и сохраняем в БД
+        hash_pwd = generate_password_hash(password)
+        new_user = User(username=username, password=hash_pwd, role=role)
+
+        db.session.add(new_user)
+        db.session.commit()
+
+        return redirect(url_for('index')) # После успеха кидаем на главную
+
+    return render_template('register.html')
 
 # --- ЗАПУСК ---
 if __name__ == '__main__':
