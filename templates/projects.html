@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>📋 Активные проекты</h2>
+    <a href="/projects/new" class="btn btn-primary">+ Создать проект</a>
+</div>
+
+<div class="row">
+    {% for project in projects %}
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title fw-bold">{{ project.title }}</h5>
+                <h6 class="card-subtitle mb-2 text-muted">
+                    📅 Старт: {{ project.start_date.strftime('%d.%m.%Y') }}
+                </h6>
+                <p class="card-text">{{ project.description }}</p>
+            </div>
+            <div class="card-footer bg-white border-top-0 d-flex justify-content-between align-items-center">
+                <small class="text-muted">ID: {{ project.id }}</small>
+                <a href="/projects/{{ project.id }}/book" class="btn btn-sm btn-outline-success">Забронировать технику</a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="alert alert-warning text-center">
+            Пока нет ни одного проекта. Самое время создать первый!
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

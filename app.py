@@ -1,3 +1,8 @@
+import sys
+print("Где я нахожусь:", sys.executable)
+from datetime import datetime, date
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
@@ -16,12 +21,17 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login' # Кидать пользователя туда, если не вошел
+
 # --- ОПИСАНИЕ ТАБЛИЦ ---
 
 # Таблица 1: Пользователи (Администратор, Преподаватель, Студент) 
-class User(db.Model):
+class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)  # int IDENTITY(1,1) PRIMARY KEY
     username = db.Column(db.String(80), unique=True, nullable=False) # varchar(80) NOT NULL UNIQUE
+    email = db.Column(db.String(120), unique=True, nullable=True)
     password = db.Column(db.String(120), nullable=False) # varchar(120) - здесь будет хэш пароля
     role = db.Column(db.String(20), nullable=False) # 'admin', 'teacher', 'student'
 
@@ -46,36 +56,264 @@ class Equipment(db.Model):
     type = db.Column(db.String(50), nullable=False)  # 'camera', 'light', 'prop' (реквизит)
     is_broken = db.Column(db.Boolean, default=False) # Состояние техники [cite: 14]
 
+# Таблица 4: Бронирования (Связь Проекта и Оборудования)
+class Booking(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
+    equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=False)
+    date = db.Column(db.Date, nullable=False) # На какую дату бронь
+
+    # Настройка связей для удобного обращения к данным
+    project = db.relationship('Project', backref='bookings')
+    equipment = db.relationship('Equipment', backref='bookings')
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
 # --- МАРШРУТЫ (ROUTES) ---
 @app.route('/')
 def index():
-    # Эта функция ищет файл index.html в папке templates
-    return render_template('index.html')
+    # Если пользователь гость - показывает просто приветствие
+    if not current_user.is_authenticated:
+        return render_template('index.html')
+
+    # Если пользователь вошел - показывает статистику для Дашборда
+    
+    # 1. Считает общие цифры
+    total_projects = Project.query.count()
+    total_equipment = Equipment.query.count()
+    
+    # 2. Ищет бронирования на сегодня
+    today = date.today()
+    bookings_today = Booking.query.filter_by(date=today).all()
+    
+    # 3. Считаем, сколько техники занято сегодня
+    busy_count = len(bookings_today)
+
+    return render_template('index.html', 
+                           total_projects=total_projects,
+                           total_equipment=total_equipment,
+                           busy_count=busy_count,
+                           bookings_today=bookings_today,
+                           today_date=today)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        # 1. Получаем данные из формы
         username = request.form['username']
+        email = request.form['email']       # 1. Получаем Email из формы
         password = request.form['password']
-        role = request.form['role'] # 'student' или 'teacher'
-
-        # 2. Проверяем, нет ли уже такого пользователя
-        user = User.query.filter_by(username=username).first()
-        if user:
-            flash('Такой пользователь уже существует')
+        role = request.form['role']
+        
+        # 2. Проверка: не занят ли Логин или Email?
+        if User.query.filter_by(username=username).first():
+            flash('Пользователь с таким логином уже существует')
             return redirect(url_for('register'))
-
-        # 3. Хешируем пароль и сохраняем в БД
+            
+        if User.query.filter_by(email=email).first():
+            flash('Пользователь с таким Email уже существует')
+            return redirect(url_for('register'))
+        
+        # 3. Создание пользователя, передавая email
         hash_pwd = generate_password_hash(password)
-        new_user = User(username=username, password=hash_pwd, role=role)
-
+        new_user = User(username=username, email=email, password=hash_pwd, role=role)
+        
         db.session.add(new_user)
         db.session.commit()
-
-        return redirect(url_for('index')) # После успеха кидаем на главную
-
+        
+        flash('Регистрация прошла успешно! Теперь войдите.')
+        return redirect(url_for('login'))
+        
     return render_template('register.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        user = User.query.filter_by(username=username).first()
+        
+        # Проверяем: пользователь найден? Пароль совпадает?
+        if user and check_password_hash(user.password, password):
+            login_user(user) # Магия Flask-Login: запоминаем пользователя
+            return redirect(url_for('index'))
+        else:
+            flash('Неверный логин или пароль')
+            
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required # Только для тех, кто вошел
+def logout():
+    logout_user()
+    return redirect(url_for('index'))
+
+# --- УПРАВЛЕНИЕ ОБОРУДОВАНИЕМ ---
+
+@app.route('/equipment')
+@login_required
+def equipment_list():
+    # Забираем всё оборудование из базы
+    items = Equipment.query.all()
+    return render_template('equipment.html', items=items)
+
+@app.route('/equipment/add', methods=['GET', 'POST'])
+@login_required
+def add_equipment():
+    # Проверка: только админ или преподаватель могут добавлять технику
+    if current_user.role not in ['admin', 'teacher']:
+        flash('У вас нет прав добавлять оборудование!')
+        return redirect(url_for('equipment_list'))
+
+    if request.method == 'POST':
+        name = request.form['name']
+        eq_type = request.form['type'] # camera, light, prop
+        
+        # Создание новою запись
+        new_item = Equipment(name=name, type=eq_type, is_broken=False)
+        db.session.add(new_item)
+        db.session.commit()
+        
+        flash('Оборудование успешно добавлено!')
+        return redirect(url_for('equipment_list'))
+
+    return render_template('add_equipment.html')
+
+# --- УПРАВЛЕНИЕ ПРОЕКТАМИ ---
+
+@app.route('/projects')
+@login_required
+def project_list():
+    # Показываем все проекты
+    projects = Project.query.all()
+    
+    # Чтобы отобразить имя создателя, нам понадобится связь. 
+    # Но для простоты пока просто передадим список.
+    return render_template('projects.html', projects=projects)
+
+@app.route('/projects/new', methods=['GET', 'POST'])
+@login_required
+def create_project():
+    if request.method == 'POST':
+        title = request.form['title']
+        description = request.form['description']
+        date_str = request.form['start_date'] # Приходит строка вида '2024-02-20'
+        
+        # Конвертация строки в объект даты Python
+        try:
+            start_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash('Неверный формат даты')
+            return redirect(url_for('create_project'))
+
+        # Создание проекта. Важно: запоминаем, КТО его создал (current_user.id)
+        new_project = Project(
+            title=title, 
+            description=description, 
+            start_date=start_date,
+            created_by=current_user.id 
+        )
+        
+        db.session.add(new_project)
+        db.session.commit()
+        
+        flash(f'Проект "{title}" успешно создан!')
+        return redirect(url_for('project_list'))
+
+    return render_template('create_project.html')
+
+# --- БРОНИРОВАНИЕ ---
+
+@app.route('/projects/<int:project_id>/book', methods=['GET', 'POST'])
+@login_required
+def book_equipment(project_id):
+    project = Project.query.get_or_404(project_id)
+    
+    if request.method == 'POST':
+        date_str = request.form['date']
+        equipment_ids = request.form.getlist('equipment') # Получение списка ID выбранных галочек
+        
+        try:
+            book_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash('Неверный формат даты')
+            return redirect(url_for('book_equipment', project_id=project_id))
+
+        # Сохранение брони для каждого выбранного предмета
+        count = 0
+        for eq_id in equipment_ids:
+            # Проверка: не занят ли этот предмет в этот день уже каким-то проектом?
+            # (Проверка корявая, но для учебного проекта сойдет)
+            exists = Booking.query.filter_by(equipment_id=eq_id, date=book_date).first()
+            
+            if not exists:
+                new_booking = Booking(project_id=project.id, equipment_id=eq_id, date=book_date)
+                db.session.add(new_booking)
+                count += 1
+            else:
+                flash(f'Оборудование ID {eq_id} уже занято на эту дату!')
+        
+        db.session.commit()
+        flash(f'Успешно забронировано предметов: {count}')
+        return redirect(url_for('project_list'))
+
+    # Для GET запроса показывает список всего оборудования
+    all_equipment = Equipment.query.all()
+    return render_template('book_equipment.html', project=project, equipment=all_equipment)
+
+@app.route('/api/check_availability')
+def check_availability():
+    date_str = request.args.get('date')
+    
+    if not date_str:
+        return jsonify([]) # Если даты нет, возвращает пустой список
+
+    try:
+        check_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify([])
+
+    # Ищет все бронирования на эту дату
+    bookings = Booking.query.filter_by(date=check_date).all()
+    
+    # Собирает список ID занятого оборудования
+    busy_ids = [b.equipment_id for b in bookings]
+    
+    return jsonify(busy_ids)
+
+# --- ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ---
+
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        new_password = request.form['password']
+
+        # Проверка: если имя изменилось, занято ли оно?
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user and existing_user.id != current_user.id:
+            flash('Это имя пользователя уже занято.')
+            return redirect(url_for('profile'))
+
+        # Обновляем данные
+        current_user.username = username
+        current_user.email = email
+
+        # Если ввели новый пароль - обновляет и его
+        if new_password:
+            current_user.password = generate_password_hash(new_password)
+            flash('Данные и пароль обновлены!')
+        else:
+            flash('Данные профиля обновлены!')
+
+        db.session.commit()
+        return redirect(url_for('profile'))
+
+    return render_template('profile.html', user=current_user)
 
 # --- ЗАПУСК ---
 if __name__ == '__main__':

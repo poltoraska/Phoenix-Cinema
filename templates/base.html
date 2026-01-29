@@ -8,21 +8,54 @@
   </head>
   <body>
     
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
       <div class="container">
         <a class="navbar-brand" href="/">🎬 Phoenix Cinema</a>
-        <div class="collapse navbar-collapse">
+        
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarContent">
+          
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             <li class="nav-item"><a class="nav-link" href="/">Главная</a></li>
-            <li class="nav-item"><a class="nav-link" href="#">Проекты</a></li>
-            <li class="nav-item"><a class="nav-link" href="#">Оборудование</a></li>
-            <li class="nav-item"><a class="nav-link fw-bold" href="/register">Регистрация</a></li>
+            <li class="nav-item"><a class="nav-link" href="/equipment">Оборудование</a></li>
+            <li class="nav-item"><a class="nav-link" href="/projects">Проекты</a></li>
           </ul>
+
+          <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+            {% if current_user.is_authenticated %}
+                <li class="nav-item d-flex align-items-center">
+                  <a class="nav-link text-white fw-bold" href="/profile">
+                    👤 {{ current_user.username }} 
+                  <span class="badge bg-light text-primary mx-1">{{ current_user.role }}</span>
+                  </a>
+                </li>
+                <li class="nav-item">
+                    <a class="btn btn-danger btn-sm ms-2" href="/logout">Выйти</a>
+                </li>
+            {% else %}
+                <li class="nav-item"><a class="nav-link" href="/login">Вход</a></li>
+                <li class="nav-item"><a class="nav-link" href="/register">Регистрация</a></li>
+            {% endif %}
+          </ul>
+
         </div>
       </div>
     </nav>
+    <div class="container">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-    <div class="container mt-4">
         {% block content %}
         {% endblock %}
     </div>

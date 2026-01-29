@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>🎥 Оборудование и реквизит</h2>
+    {% if current_user.role in ['admin', 'teacher'] %}
+        <a href="/equipment/add" class="btn btn-success">+ Добавить технику</a>
+    {% endif %}
+</div>
+
+<div class="card shadow">
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Название</th>
+                    <th>Тип</th>
+                    <th>Состояние</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.id }}</td>
+                    <td class="fw-bold">{{ item.name }}</td>
+                    <td>
+                        {% if item.type == 'camera' %} <span class="badge bg-primary">Камера</span>
+                        {% elif item.type == 'light' %} <span class="badge bg-warning text-dark">Свет</span>
+                        {% else %} <span class="badge bg-secondary">Реквизит</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.is_broken %}
+                            <span class="text-danger">⚠ Сломано</span>
+                        {% else %}
+                            <span class="text-success">✔ Исправно</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary">Изменить</button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted">База данных пуста. Добавьте первое оборудование.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

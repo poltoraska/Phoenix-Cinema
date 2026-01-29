@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">👤 Редактирование профиля</h4>
+            </div>
+            <div class="card-body">
+                
+                <div class="text-center mb-4">
+                    <div class="display-1">🧑‍💻</div>
+                    <h5>{{ user.role }}</h5>
+                </div>
+
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Логин</label>
+                        <input type="text" class="form-control" name="username" value="{{ user.username }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" name="email" value="{{ user.email or '' }}" placeholder="name@example.com">
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-3">
+                        <label class="form-label">Новый пароль</label>
+                        <input type="password" class="form-control" name="password" placeholder="Оставьте пустым, если не хотите менять">
+                        <div class="form-text">Заполняйте это поле только для смены пароля.</div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success">Сохранить изменения</button>
+                        <a href="/" class="btn btn-secondary">На главную</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

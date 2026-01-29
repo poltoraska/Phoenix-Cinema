@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Добавление новой техники</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Название оборудования</label>
+                        <input type="text" class="form-control" name="name" placeholder="Например: Canon EOS R5" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Тип</label>
+                        <select class="form-select" name="type">
+                            <option value="camera">Камера / Видео</option>
+                            <option value="light">Свет / Звук</option>
+                            <option value="prop">Реквизит / Костюм</option>
+                        </select>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success">Сохранить</button>
+                        <a href="/equipment" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
