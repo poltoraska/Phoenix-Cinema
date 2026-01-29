@@ -42,10 +42,10 @@
 
 | Компонент | Инструмент / Технология |
 | :--- | :--- |
-| **Язык** | ![Python]|
-| **Backend** | ![Flask] |
-| **База данных** | ![SQLite] |
-| **Frontend** | ![HTML5]![Bootstrap]|
+| **Язык** | Python|
+| **Backend** | Flask |
+| **База данных** | SQLite |
+| **Frontend** | HTML5 & Bootstrap|
 | **Шаблонизатор** | Jinja2 |
 | **Скрипты** | JavaScript |
 | **IDE** | VS Code / PyCharm |
