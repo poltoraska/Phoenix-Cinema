@@ -48,7 +48,7 @@
 | **Frontend** | HTML5 & Bootstrap|
 | **Шаблонизатор** | Jinja2 |
 | **Скрипты** | JavaScript |
-| **IDE** | VS Code / PyCharm |
+| **IDE** | VS Code & PyCharm |
 
 ---
 
