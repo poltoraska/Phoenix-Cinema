@@ -1,122 +1,89 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-10">
-        <div class="card shadow">
-            <div class="card-header bg-warning text-dark">
-                <h4 class="mb-0">📦 Бронирование для проекта: "{{ project.title }}"</h4>
-            </div>
-            <div class="card-body">
-                <form method="POST">
-                    
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">Выберите дату съёмки:</label>
-                        <input type="date" class="form-control w-25" name="date" id="datePicker" required>
-                        <div class="form-text">При изменении даты статус оборудования обновится автоматически.</div>
-                    </div>
+<div class="mb-4">
+    <h2>🎬 Бронирование для проекта: "{{ project.title }}"</h2>
+    <p class="text-muted">Дата начала съемок: {{ project.start_date }}</p>
+    <a href="/projects" class="btn btn-outline-secondary btn-sm">← Назад к проектам</a>
+</div>
 
-                    <h5 class="mb-3">Доступное оборудование:</h5>
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width: 50px;">Выбрать</th>
-                                    <th>Название</th>
-                                    <th>Тип</th>
-                                    <th>Статус</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in equipment %}
-                                <tr id="row-{{ item.id }}">
-                                    <td class="text-center">
-                                        <input class="form-check-input equipment-checkbox" 
-                                            type="checkbox" 
-                                            name="equipment" 
-                                            value="{{ item.id }}"
-                                            id="checkbox-{{ item.id }}"
-                                            {% if item.is_broken %}disabled{% endif %}>
-                                    </td>
-                                    <td>{{ item.name }}</td>
-        
-                                    <td>
-                                        {% if item.type == 'camera' %} 
-                                            <span class="badge bg-primary">Камера</span>
-                                        {% elif item.type == 'light' %} 
-                                            <span class="badge bg-warning text-dark">Свет</span>
-                                        {% elif item.type == 'prop' %} 
-                                            <span class="badge bg-secondary">Реквизит</span>
-                                        {% else %}
-                                            {{ item.type }}
-                                        {% endif %}
-                                    </td>
-                                    <td id="status-{{ item.id }}">
-                                        {% if item.is_broken %}
-                                            <span class="badge bg-danger">В ремонте</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">Выберите дату</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                    {% endfor %}
-                              </tbody>
-                        </table>
-                    </div>
-
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
-                        <a href="/projects" class="btn btn-secondary">Отмена</a>
-                        <button type="submit" class="btn btn-primary px-4">Забронировать выбранное</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0">✅ Текущая бронь (Занято)</h5>
+    </div>
+    <div class="card-body">
+        {% if project.bookings %}
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Дата</th>
+                        <th>Оборудование</th>
+                        <th>Действие</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for booking in project.bookings %}
+                    <tr>
+                        <td>{{ booking.date.strftime('%d.%m.%Y') }}</td>
+                        <td>
+                            <strong>{{ booking.equipment.name }}</strong>
+                            <br>
+                            <small class="text-muted">{{ booking.equipment.type }}</small>
+                        </td>
+                        <td>
+                            <form action="{{ url_for('delete_booking', booking_id=booking.id) }}" method="POST">
+                                <button type="submit" class="btn btn-danger btn-sm">✕ Отменить</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="text-muted text-center py-3">Пока ничего не забронировано.</p>
+        {% endif %}
     </div>
 </div>
 
-<script>
-    // Находит поле даты
-    const dateInput = document.getElementById('datePicker');
-    
-    // Смотрит изменение даты
-    dateInput.addEventListener('change', function() {
-        const selectedDate = this.value;
-        if (!selectedDate) return;
+<div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">➕ Добавить оборудование</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">На какую дату?</label>
+                    <input type="date" class="form-control" name="date" required>
+                </div>
+            </div>
 
-        // Отправляет запрос на сервер (API)
-        fetch(`/api/check_availability?date=${selectedDate}`)
-            .then(response => response.json())
-            .then(busyIds => {
-                // busyIds - это массив ID занятых вещей, например
-                
-                // Проходится по всем строкам таблицы
-                const checkboxes = document.querySelectorAll('.equipment-checkbox');
-                
-                checkboxes.forEach(checkbox => {
-                    const equipmentId = parseInt(checkbox.value);
-                    const statusCell = document.getElementById(`status-${equipmentId}`);
-                    const row = document.getElementById(`row-${equipmentId}`);
-                    
-                    // Если оборудование сломано, его не трогает
-                    if (checkbox.disabled && statusCell.innerText.includes('В ремонте')) {
-                        return;
-                    }
+            <div class="mb-3">
+                <label class="form-label fw-bold">Выберите оборудование (можно несколько):</label>
+                <div class="equipment-list" style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: 5px;">
+                    {% for item in equipment %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="equipment" value="{{ item.id }}" id="eq_{{ item.id }}">
+                        <label class="form-check-label" for="eq_{{ item.id }}">
+                            {{ item.name }} 
+                            
+                            {% if item.type == 'camera' %} <span class="badge bg-primary ms-1">Камера</span>
+                            {% elif item.type == 'light' %} <span class="badge bg-warning text-dark ms-1">Свет</span>
+                            {% elif item.type == 'consumable' %} <span class="badge bg-info text-dark ms-1">Расходник</span>
+                            {% elif item.type == 'prop' %} <span class="badge bg-secondary ms-1">Реквизит</span>
+                            {% elif item.type == 'other' %} <span class="badge bg-dark ms-1">Другое</span>
+                            {% else %} <span class="badge bg-secondary ms-1">{{ item.type }}</span>
+                            {% endif %}
+                            
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
 
-                    if (busyIds.includes(equipmentId)) {
-                        // ЗАНЯТО: Блокирует галочку и меняет статус
-                        checkbox.disabled = true;
-                        checkbox.checked = false;
-                        statusCell.innerHTML = '<span class="badge bg-danger">⛔ Занято</span>';
-                        row.classList.add('table-secondary'); // Делает строку серой
-                    } else {
-                        // СВОБОДНО: Разблокирует
-                        checkbox.disabled = false;
-                        statusCell.innerHTML = '<span class="badge bg-success">✔ Доступно</span>';
-                        row.classList.remove('table-secondary');
-                    }
-                });
-            })
-            .catch(error => console.error('Ошибка:', error));
-    });
-</script>
+            <button type="submit" class="btn btn-success">Забронировать выбранное</button>
+        </form>
+    </div>
+</div>
 {% endblock %}

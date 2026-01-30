@@ -197,7 +197,7 @@ def export_equipment():
     for item in equipment:
         data.append({
             'Название': item.name,
-            'Тип (camera/light/prop)': item.type,
+            'Тип (camera/light/prop/consumable/other)': item.type,
             'Сломано (TRUE/FALSE)': item.is_broken
         })
     
@@ -235,7 +235,7 @@ def import_equipment():
         count = 0
         for index, row in df.iterrows():
             name = row['Название']
-            eq_type = row['Тип (camera/light/prop)']
+            eq_type = row['Тип (camera/light/prop/consumable/other)']
             
             # Простая защита от дублей: если такое имя есть, пропуск
             if not Equipment.query.filter_by(name=name).first():
@@ -249,6 +249,32 @@ def import_equipment():
     except Exception as e:
         flash(f'Ошибка при чтении файла: {e}')
         
+    return redirect(url_for('equipment_list'))
+
+@app.route('/equipment/<int:id>/delete', methods=['POST'])
+@login_required
+def delete_equipment(id):
+    # 1. Проверка прав (только админ, учитель, сотрудник)
+    if current_user.role not in ['admin', 'teacher', 'employee']:
+        flash('У вас нет прав на удаление!')
+        return redirect(url_for('equipment_list'))
+
+    item = Equipment.query.get_or_404(id)
+
+    # 2. Проверка на использование предмета в бронированиях?
+    if item.bookings: 
+        flash(f'Нельзя удалить "{item.name}", так как этот предмет используется в проектах. Сначала удалите брони.')
+        return redirect(url_for('equipment_list'))
+
+    # 3. Удаление
+    try:
+        db.session.delete(item)
+        db.session.commit()
+        flash(f'Оборудование "{item.name}" удалено.')
+    except Exception as e:
+        db.session.rollback()
+        flash('Ошибка при удалении.')
+
     return redirect(url_for('equipment_list'))
 
 # --- УПРАВЛЕНИЕ ПРОЕКТАМИ ---
@@ -332,6 +358,24 @@ def book_equipment(project_id):
     # Для GET запроса показывает список всего оборудования
     all_equipment = Equipment.query.all()
     return render_template('book_equipment.html', project=project, equipment=all_equipment)
+
+@app.route('/booking/<int:booking_id>/delete', methods=['POST'])
+@login_required
+def delete_booking(booking_id):
+    booking = Booking.query.get_or_404(booking_id)
+    project_id = booking.project_id # Чтобы вернуться на ту же страницу
+    
+    # Простейшая проверка прав: удалять может кто угодно, кто имеет доступ
+    
+    try:
+        db.session.delete(booking)
+        db.session.commit()
+        flash('Бронь отменена.')
+    except Exception as e:
+        db.session.rollback()
+        flash('Ошибка при отмене брони.')
+        
+    return redirect(url_for('book_equipment', project_id=project_id))
 
 @app.route('/api/check_availability')
 def check_availability():
