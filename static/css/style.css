@@ -1,0 +1,79 @@
+/* 1. Фон всего сайта */
+body {
+    background-color: #f8f9fa; /* Светло-серый фон */
+}
+
+/* 2. Шапка сайта */
+.bg-primary {
+    background-color: #2c3e50 !important; /* Темно-синий */
+}
+
+/* 3. Кнопки "Основные" */
+.btn-primary {
+    background-color: #d35400; /* Оранжевый (цвет феникса) */
+    border-color: #d35400;
+}
+
+/* Эффект при наведении на кнопку */
+.btn-primary:hover {
+    background-color: #e67e22;
+    border-color: #e67e22;
+}
+
+/* 4. Кнопки "Успех" (зеленые, например "Добавить") */
+.btn-success {
+    background-color: #27ae60;
+    border-color: #27ae60;
+}
+
+/* 5. Карточки (проекты, оборудование) */
+.card {
+    border: none; 
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Красивая тень */
+}
+
+/* Заголовки карточек */
+.card-header {
+    font-weight: bold;
+}
+
+/* --- Цвета карточек на Главной --- */
+
+/* 1. ГЛАВНОЕ ПРАВИЛО, ВЕСЬ текст (включая шапку) в белый */
+.card-projects .card-header, .card-projects .card-body, .card-projects h2, .card-projects p,
+.card-busy .card-header,     .card-busy .card-body,     .card-busy h2,     .card-busy p,
+.card-total .card-header,    .card-total .card-body,    .card-total h2,    .card-total p {
+    color: #ffffff !important;
+}
+
+/* 2. Активные проекты */
+.card-projects {
+    background-color: #d63031 !important; 
+    border: none;
+}
+
+/* 3. Занято сегодня */
+.card-busy {
+    background-color: #636e72 !important;
+    border: none;
+}
+
+/* 4. Всего техники */
+.card-total {
+    background-color: #2d3436 !important;
+    border: none;
+}
+
+/* Эффект наведения */
+.card:hover {
+    transform: translateY(-5px);
+    transition: transform 0.3s ease;
+}
+
+/* --- Нижняя карточка (График) --- */
+
+/* Текст заголовка и название (h5) белый */
+.card-schedule .card-header, 
+.card-schedule .card-header h5 {
+    color: #ffffff !important;
+}

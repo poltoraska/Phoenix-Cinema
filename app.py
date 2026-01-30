@@ -1,5 +1,8 @@
 import sys
 print("Где я нахожусь:", sys.executable)
+import pandas as pd
+import io
+from flask import send_file
 from datetime import datetime, date
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -162,8 +165,8 @@ def equipment_list():
 @app.route('/equipment/add', methods=['GET', 'POST'])
 @login_required
 def add_equipment():
-    # Проверка: только админ или преподаватель могут добавлять технику
-    if current_user.role not in ['admin', 'teacher']:
+    # Список разрешенных ролей для добавления оборудования
+    if current_user.role not in ['admin', 'teacher', 'employee']:
         flash('У вас нет прав добавлять оборудование!')
         return redirect(url_for('equipment_list'))
 
@@ -180,6 +183,73 @@ def add_equipment():
         return redirect(url_for('equipment_list'))
 
     return render_template('add_equipment.html')
+
+# --- ИМПОРТ И ЭКСПОРТ EXCEL ---
+
+@app.route('/equipment/export')
+@login_required
+def export_equipment():
+    # 1. Получаем все оборудование из базы
+    equipment = Equipment.query.all()
+    
+    # 2. Превращаем данные в список словарей
+    data = []
+    for item in equipment:
+        data.append({
+            'Название': item.name,
+            'Тип (camera/light/prop)': item.type,
+            'Сломано (TRUE/FALSE)': item.is_broken
+        })
+    
+    # 3. Создаем DataFrame (таблицу pandas)
+    df = pd.DataFrame(data)
+    
+    # 4. Сохраняем в память (виртуальный файл)
+    output = io.BytesIO()
+    # Используем движок openpyxl для записи xlsx
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Оборудование')
+    
+    output.seek(0) # Возвращаем "курсор" в начало файла
+    
+    return send_file(output, download_name="equipment_list.xlsx", as_attachment=True)
+
+@app.route('/equipment/import', methods=['POST'])
+@login_required
+def import_equipment():
+    # Проверка прав
+    if current_user.role not in ['admin', 'teacher', 'employee']:
+        flash('Нет прав для импорта')
+        return redirect(url_for('equipment_list'))
+
+    file = request.files['file']
+    if not file:
+        flash('Файл не выбран')
+        return redirect(url_for('equipment_list'))
+
+    try:
+        # Чтение Excel файл
+        df = pd.read_excel(file)
+        
+        # Чтенеие по каждой строке таблицы
+        count = 0
+        for index, row in df.iterrows():
+            name = row['Название']
+            eq_type = row['Тип (camera/light/prop)']
+            
+            # Простая защита от дублей: если такое имя есть, пропуск
+            if not Equipment.query.filter_by(name=name).first():
+                new_item = Equipment(name=name, type=eq_type, is_broken=False)
+                db.session.add(new_item)
+                count += 1
+        
+        db.session.commit()
+        flash(f'Успешно импортировано позиций: {count}')
+        
+    except Exception as e:
+        flash(f'Ошибка при чтении файла: {e}')
+        
+    return redirect(url_for('equipment_list'))
 
 # --- УПРАВЛЕНИЕ ПРОЕКТАМИ ---
 

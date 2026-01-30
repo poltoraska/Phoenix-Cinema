@@ -19,37 +19,38 @@
 
 <div class="row mb-4">
     <div class="col-md-4">
-        <div class="card text-white bg-primary mb-3 shadow-sm">
-            <div class="card-header">Активные проекты</div>
-            <div class="card-body">
-                <h2 class="card-title">{{ total_projects }}</h2>
-                <p class="card-text">Всего съёмочных групп</p>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-4">
-        <div class="card text-white bg-warning mb-3 shadow-sm">
-            <div class="card-header">Занято сегодня</div>
-            <div class="card-body">
-                <h2 class="card-title">{{ busy_count }}</h2>
-                <p class="card-text">Единиц техники на руках</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card text-white bg-success mb-3 shadow-sm">
-            <div class="card-header">Парк оборудования</div>
-            <div class="card-body">
-                <h2 class="card-title">{{ total_equipment }}</h2>
-                <p class="card-text">Всего единиц на складе</p>
-            </div>
+    <div class="card text-white card-projects mb-3 shadow-sm">
+        <div class="card-header">Активные проекты</div>
+        <div class="card-body">
+            <h2 class="card-title">{{ total_projects }}</h2>
+            <p class="card-text">Всего съёмочных групп</p>
         </div>
     </div>
 </div>
 
+<div class="col-md-4">
+    <div class="card text-white card-busy mb-3 shadow-sm">
+        <div class="card-header">Занято сегодня</div>
+        <div class="card-body">
+            <h2 class="card-title">{{ busy_count }}</h2>
+            <p class="card-text">Единиц техники на руках</p>
+        </div>
+    </div>
+</div>
+
+<div class="col-md-4">
+    <div class="card text-white card-total mb-3 shadow-sm">
+        <div class="card-header">Парк оборудования</div>
+        <div class="card-body">
+            <h2 class="card-title">{{ total_equipment }}</h2>
+            <p class="card-text">Всего единиц на складе</p>
+        </div>
+    </div>
+</div>
+</div>
+
 <div class="card shadow">
+    <div class="card shadow card-schedule">
     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
         <h5 class="mb-0">📅 График съемок на сегодня</h5>
         <a href="/projects" class="btn btn-sm btn-light">Все проекты</a>
