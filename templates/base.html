@@ -35,7 +35,7 @@
             {% if current_user.is_authenticated %}
                 <li class="nav-item d-flex align-items-center">
                   <a class="nav-link text-white fw-bold" href="/profile">
-                    👤 {{ current_user.username }} 
+                    {{ current_user.username }} 
                   <span class="badge bg-light text-primary mx-1">{{ current_user.role }}</span>
                   </a>
                 </li>

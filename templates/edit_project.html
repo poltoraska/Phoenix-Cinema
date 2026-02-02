@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark">
+                    <h3 class="mb-0">✏ Редактирование проекта</h3>
+                </div>
+                <div class="card-body">
+                    
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Название проекта:</label>
+                            <input type="text" class="form-control" name="title" required 
+                                   value="{{ project.title }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Описание:</label>
+                            <textarea class="form-control" name="description" rows="3">{{ project.description }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Дата начала съемок:</label>
+                            <input type="date" class="form-control" name="start_date" required
+                                   value="{{ project.start_date }}">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Съемочная группа:</label>
+                            <div class="card p-3 bg-light" style="max-height: 250px; overflow-y: auto;">
+                                {% for user in users %}
+                                    {% if user.id != current_user.id %}
+                                    <div class="form-check d-flex align-items-center mb-2">
+                                        <input class="form-check-input me-2" type="checkbox" name="participants" 
+                                               value="{{ user.id }}" id="user_{{ user.id }}"
+                                               {% if user in project.participants %}checked{% endif %}>
+                                        
+                                        <label class="form-check-label w-100" for="user_{{ user.id }}">
+                                            <span class="fw-bold">{{ user.username }}</span>
+                                            
+                                            {% if user.role == 'admin' %} <span class="badge bg-danger ms-2">Админ</span>
+                                            {% elif user.role == 'student' %} <span class="badge bg-info text-dark ms-2">Студент</span>
+                                            {% elif user.role == 'teacher' %} <span class="badge bg-primary ms-2">Преподаватель</span>
+                                            {% else %} <span class="badge bg-secondary ms-2">{{ user.role }}</span>
+                                            {% endif %}
+                                        </label>
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4 border-top pt-3">
+                            <a href="{{ url_for('project_list') }}" class="btn btn-secondary px-4">Отмена</a>
+                            <button type="submit" class="btn btn-warning px-4">Сохранить изменения 💾</button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

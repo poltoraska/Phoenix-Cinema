@@ -40,6 +40,12 @@ class User(UserMixin, db.Model):
 
     def __repr__(self):
         return f'<User {self.username}>'
+    
+# 1. Вспомогательная таблица связей
+project_participants = db.Table('project_participants',
+    db.Column('project_id', db.Integer, db.ForeignKey('project.id'), primary_key=True),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
+)
 
 # Таблица 2: Съемочные проекты [cite: 7, 8]
 class Project(db.Model):
@@ -51,6 +57,13 @@ class Project(db.Model):
     # Связь с создателем (Foreign Key)
     # В SQL: FOREIGN KEY (created_by) REFERENCES user(id)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    # Это связь, которая позволяет по цифре найти человека
+    author = db.relationship('User', foreign_keys=[created_by], backref='created_projects')
+
+    #Участники проекта
+    # secondary указывает на вспомогательную таблицу
+    participants = db.relationship('User', secondary=project_participants, lazy='subquery',
+        backref=db.backref('projects_participated', lazy=True))
 
 # Таблица 3: Оборудование и реквизит [cite: 13, 14]
 class Equipment(db.Model):
@@ -336,13 +349,91 @@ def create_project():
             created_by=current_user.id 
         )
         
+        # Получение списка ID пользователей с галочками
+        participant_ids = request.form.getlist('participants')
+        
+        #  Поиск этих людей в базе и прикрепление к проекту
+        for user_id in participant_ids:
+            user = User.query.get(user_id)
+            if user:
+                # Добавление пользователя в список участников проекта
+                new_project.participants.append(user)
+
         db.session.add(new_project)
         db.session.commit()
         
-        flash(f'Проект "{title}" успешно создан!')
+        flash(f'Проект "{title}" и съемочная группа успешно созданы!')
+        return redirect(url_for('project_list'))
+    
+    users = User.query.all()
+    return render_template('create_project.html', users=users)
+
+# --- РЕДАКТИРОВАНИЕ ПРОЕКТА ---
+@app.route('/projects/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_project(id):
+    project = Project.query.get_or_404(id)
+
+    # Защита: редактировать может только создатель или админ
+    if project.created_by != current_user.id and current_user.role != 'admin':
+        flash('У вас нет прав редактировать этот проект!')
         return redirect(url_for('project_list'))
 
-    return render_template('create_project.html')
+    if request.method == 'POST':
+        # 1. Обновляет простые поля
+        project.title = request.form['title']
+        project.description = request.form['description']
+        
+        try:
+            date_str = request.form['start_date']
+            project.start_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash('Неверный формат даты')
+            return redirect(url_for('edit_project', id=id))
+
+        # 2. Обновление участников
+        # Очистка текущего списка участников
+        project.participants.clear()
+        
+        # Получает новый список ID из формы
+        participant_ids = request.form.getlist('participants')
+        
+        # Добавляет заново
+        for user_id in participant_ids:
+            user = User.query.get(user_id)
+            if user:
+                project.participants.append(user)
+
+        db.session.commit()
+        flash('Проект успешно обновлен!')
+        return redirect(url_for('project_list'))
+
+    # GET-запрос: показываем форму с текущими данными
+    users = User.query.all()
+    return render_template('edit_project.html', project=project, users=users)
+
+
+# --- УДАЛЕНИЕ ПРОЕКТА ---
+@app.route('/projects/<int:id>/delete', methods=['POST'])
+@login_required
+def delete_project(id):
+    project = Project.query.get_or_404(id)
+
+    # Защита: удалять может только создатель или админ
+    if project.created_by != current_user.id and current_user.role != 'admin':
+        flash('У вас нет прав удалять этот проект!')
+        return redirect(url_for('project_list'))
+
+    try:
+        # При удалении проекта удалятся и все бронирования
+        db.session.delete(project)
+        db.session.commit()
+        flash(f'Проект "{project.title}" удален.')
+    except Exception as e:
+        db.session.rollback()
+        flash('Ошибка при удалении проекта.')
+
+    return redirect(url_for('project_list'))
 
 # --- БРОНИРОВАНИЕ ---
 
