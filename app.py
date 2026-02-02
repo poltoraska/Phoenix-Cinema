@@ -91,7 +91,7 @@ def index():
     today = date.today()
     bookings_today = Booking.query.filter_by(date=today).all()
     
-    # 3. Считаем, сколько техники занято сегодня
+    # 3. Сколько техники занято сегодня
     busy_count = len(bookings_today)
 
     return render_template('index.html', 
@@ -105,7 +105,7 @@ def index():
 def register():
     if request.method == 'POST':
         username = request.form['username']
-        email = request.form['email']       # 1. Получаем Email из формы
+        email = request.form['email']       # 1. Получает Email из формы
         password = request.form['password']
         role = request.form['role']
         
@@ -155,6 +155,30 @@ def logout():
 
 # --- УПРАВЛЕНИЕ ОБОРУДОВАНИЕМ ---
 
+@app.route('/equipment/<int:id>/toggle_status', methods=['POST'])
+@login_required
+def toggle_equipment_status(id):
+    # Проверка прав как и при удалении
+    if current_user.role not in ['admin', 'teacher', 'employee']:
+        flash('У вас нет прав на изменение статуса!')
+        return redirect(url_for('equipment_list'))
+
+    item = Equipment.query.get_or_404(id)
+    
+    # Меняет True на False и наоборот
+    item.is_broken = not item.is_broken
+    
+    try:
+        db.session.commit()
+        # Показывает разное сообщение в зависимости от того, что стало
+        status_text = "сломано" if item.is_broken else "исправно"
+        flash(f'Статус обновлен: "{item.name}" теперь {status_text}.')
+    except Exception as e:
+        db.session.rollback()
+        flash('Ошибка при обновлении статуса.')
+
+    return redirect(url_for('equipment_list'))
+
 @app.route('/equipment')
 @login_required
 def equipment_list():
@@ -201,7 +225,7 @@ def export_equipment():
             'Сломано (TRUE/FALSE)': item.is_broken
         })
     
-    # 3. Создаем DataFrame (таблицу pandas)
+    # 3. Создает DataFrame (таблицу pandas)
     df = pd.DataFrame(data)
     
     # 4. Сохраняем в память (виртуальный файл)

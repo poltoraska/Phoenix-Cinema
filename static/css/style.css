@@ -77,3 +77,7 @@ body {
 .card-schedule .card-header h5 {
     color: #ffffff !important;
 }
+
+.form-label {
+  color: white;
+}

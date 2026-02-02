@@ -50,10 +50,26 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if item.is_broken %}
-                        <span class="text-danger">⚠ Сломано</span>
+                        {% if current_user.role in ['admin', 'teacher', 'employee'] %}
+                            
+                            <form action="{{ url_for('toggle_equipment_status', id=item.id) }}" method="POST">
+                                {% if item.is_broken %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger border-0 fw-bold" title="Нажмите, чтобы отметить как ИСПРАВНОЕ">
+                                        ⚠ Сломано
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-sm btn-outline-success border-0 fw-bold" title="Нажмите, чтобы отметить как СЛОМАННОЕ">
+                                        ✔ Исправно
+                                    </button>
+                                {% endif %}
+                            </form>
+
                         {% else %}
-                        <span class="text-success">✔ Исправно</span>
+                            {% if item.is_broken %}
+                                <span class="text-danger fw-bold">⚠ Сломано</span>
+                            {% else %}
+                                <span class="text-success fw-bold">✔ Исправно</span>
+                            {% endif %}
                         {% endif %}
                     </td>
                     <td>
