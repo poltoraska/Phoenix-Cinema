@@ -354,6 +354,14 @@ def book_equipment(project_id):
     if request.method == 'POST':
         date_str = request.form['date']
         equipment_ids = request.form.getlist('equipment') # Получение списка ID выбранных галочек
+
+        # --- НОВАЯ ЗАЩИТА ОТ ПОЛОМОК ---
+        for eq_id in equipment_ids:
+            item = Equipment.query.get(eq_id)
+            if item and item.is_broken:
+                flash(f'Ошибка: "{item.name}" находится в ремонте и недоступно для брони!', 'danger')
+                return redirect(url_for('book_equipment', project_id=project_id))
+        # -------------------------------
         
         try:
             book_date = datetime.strptime(date_str, '%Y-%m-%d').date()

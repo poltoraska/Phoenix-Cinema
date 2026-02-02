@@ -13,34 +13,34 @@
     </div>
     <div class="card-body">
         {% if project.bookings %}
-            <table class="table table-striped align-middle">
-                <thead>
-                    <tr>
-                        <th>Дата</th>
-                        <th>Оборудование</th>
-                        <th>Действие</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for booking in project.bookings %}
-                    <tr>
-                        <td>{{ booking.date.strftime('%d.%m.%Y') }}</td>
-                        <td>
-                            <strong>{{ booking.equipment.name }}</strong>
-                            <br>
-                            <small class="text-muted">{{ booking.equipment.type }}</small>
-                        </td>
-                        <td>
-                            <form action="{{ url_for('delete_booking', booking_id=booking.id) }}" method="POST">
-                                <button type="submit" class="btn btn-danger btn-sm">✕ Отменить</button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Оборудование</th>
+                    <th>Действие</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in project.bookings %}
+                <tr>
+                    <td>{{ booking.date.strftime('%d.%m.%Y') }}</td>
+                    <td>
+                        <strong>{{ booking.equipment.name }}</strong>
+                        <br>
+                        <small class="text-muted">{{ booking.equipment.type }}</small>
+                    </td>
+                    <td>
+                        <form action="{{ url_for('delete_booking', booking_id=booking.id) }}" method="POST">
+                            <button type="submit" class="btn btn-danger btn-sm">✕ Отменить</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         {% else %}
-            <p class="text-muted text-center py-3">Пока ничего не забронировано.</p>
+        <p class="text-muted text-center py-3">Пока ничего не забронировано.</p>
         {% endif %}
     </div>
 </div>
@@ -51,7 +51,7 @@
     </div>
     <div class="card-body">
         <form method="POST">
-            
+
             <div class="row mb-3">
                 <div class="col-md-4">
                     <label class="form-label fw-bold">На какую дату?</label>
@@ -61,22 +61,37 @@
 
             <div class="mb-3">
                 <label class="form-label fw-bold">Выберите оборудование (можно несколько):</label>
-                <div class="equipment-list" style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: 5px;">
+                <div class="equipment-list"
+                    style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: 5px;">
                     {% for item in equipment %}
                     <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="equipment" value="{{ item.id }}" id="eq_{{ item.id }}">
+
+                        {% if item.is_broken %}
+                        <input class="form-check-input" type="checkbox" disabled>
+
+                        <label class="form-check-label text-muted text-decoration-line-through"
+                            title="Оборудование неисправно">
+                            {{ item.name }}
+                            <span class="badge bg-danger ms-1">⚠ Сломано</span>
+                        </label>
+
+                        {% else %}
+                        <input class="form-check-input" type="checkbox" name="equipment" value="{{ item.id }}"
+                            id="eq_{{ item.id }}">
+
                         <label class="form-check-label" for="eq_{{ item.id }}">
-                            {{ item.name }} 
-                            
+                            {{ item.name }}
+
                             {% if item.type == 'camera' %} <span class="badge bg-primary ms-1">Камера</span>
                             {% elif item.type == 'light' %} <span class="badge bg-warning text-dark ms-1">Свет</span>
-                            {% elif item.type == 'consumable' %} <span class="badge bg-info text-dark ms-1">Расходник</span>
                             {% elif item.type == 'prop' %} <span class="badge bg-secondary ms-1">Реквизит</span>
-                            {% elif item.type == 'other' %} <span class="badge bg-dark ms-1">Другое</span>
-                            {% else %} <span class="badge bg-secondary ms-1">{{ item.type }}</span>
+                            {% elif item.type == 'consumable' %} <span
+                                class="badge bg-info text-dark ms-1">Расходник</span>
+                            {% else %} <span class="badge bg-dark ms-1">Другое</span>
                             {% endif %}
-                            
                         </label>
+                        {% endif %}
+
                     </div>
                     {% endfor %}
                 </div>
