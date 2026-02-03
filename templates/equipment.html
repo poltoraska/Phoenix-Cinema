@@ -1,34 +1,92 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+
+<div class="d-flex justify-content-between align-items-center mb-3">
     <h2>🎥 Оборудование и реквизит</h2>
 
-    <div class="d-flex gap-2">
-        {% if current_user.role in ['admin', 'teacher', 'employee'] %}
+    {% if current_user.role in ['admin', 'teacher', 'employee'] %}
+    <a href="/equipment/add" class="btn btn-success fw-bold">
+        + Добавить
+    </a>
+    {% endif %}
+</div>
 
-        <a href="/equipment/export" class="btn btn-outline-success">📥 Скачать Excel</a>
+{% if current_user.role in ['admin', 'teacher', 'employee'] %}
+<div class="card mb-4 border-secondary-subtle">
+    <div class="card-header bg-transparent border-0 pb-0">
+        <small class="text-muted fw-bold">📥 Импорт и экспорт данных Excel</small>
+    </div>
+    <div class="card-body d-flex align-items-center flex-wrap gap-3 pt-2">
+        
+        <a href="/equipment/export" class="btn btn-outline-success">
+            📄 Скачать текущий список
+        </a>
 
-        <form action="/equipment/import" method="post" enctype="multipart/form-data" class="d-flex gap-2">
-            <input type="file" name="file" class="form-control" required accept=".xlsx, .xls">
-            <button type="submit" class="btn btn-outline-primary">Загрузить</button>
+        <div class="vr text-muted mx-2 d-none d-md-block" style="height: 30px;"></div> <form action="/equipment/import" method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-center flex-grow-1">
+            <label class="text-muted d-none d-md-block">Загрузить новые:</label>
+            <input type="file" name="file" class="form-control" required accept=".xlsx, .xls" style="max-width: 500px;">
+            <button type="submit" class="btn btn-primary">Загрузить</button>
         </form>
 
-        <a href="/equipment/add" class="btn btn-success">+ Вручную</a>
-        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<div class="card mb-4 border-0 bg-light">
+    <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
+        
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('equipment_list', type='all', q=search_query) }}" 
+               class="btn btn-outline-secondary {% if not current_filter or current_filter == 'all' %}active{% endif %}">
+               Все
+            </a>
+            <a href="{{ url_for('equipment_list', type='camera', q=search_query) }}" 
+               class="btn btn-outline-secondary {% if current_filter == 'camera' %}active{% endif %}">
+               📹 Камеры
+            </a>
+            <a href="{{ url_for('equipment_list', type='light', q=search_query) }}" 
+               class="btn btn-outline-secondary {% if current_filter == 'light' %}active{% endif %}">
+               💡 Свет
+            </a>
+            <a href="{{ url_for('equipment_list', type='prop', q=search_query) }}" 
+               class="btn btn-outline-secondary {% if current_filter == 'prop' %}active{% endif %}">
+               🎭 Реквизит
+            </a>
+            <a href="{{ url_for('equipment_list', type='consumable', q=search_query) }}" 
+               class="btn btn-outline-secondary {% if current_filter == 'consumable' %}active{% endif %}">
+               🔋 Расходники
+            </a>
+        </div>
+
+        <form action="{{ url_for('equipment_list') }}" method="GET" class="d-flex" style="max-width: 300px;">
+            {% if current_filter %}
+            <input type="hidden" name="type" value="{{ current_filter }}">
+            {% endif %}
+            
+            <input class="form-control me-2" type="search" name="q" placeholder="Поиск по названию..." 
+                   value="{{ search_query if search_query else '' }}">
+            <button class="btn btn-primary" type="submit">🔍</button>
+            
+            {% if search_query %}
+            <a href="{{ url_for('equipment_list', type=current_filter) }}" class="btn btn-outline-danger ms-1" title="Сбросить поиск">✖</a>
+            {% endif %}
+        </form>
     </div>
 </div>
 
 <div class="card shadow">
     <div class="card-body">
-        <table class="table table-hover">
+        <table class="table table-hover align-middle">
             <thead class="table-light">
                 <tr>
                     <th>ID</th>
                     <th>Название</th>
                     <th>Тип</th>
                     <th>Состояние</th>
+                    {% if current_user.role in ['admin', 'teacher', 'employee'] %}
                     <th>Действия</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -37,33 +95,22 @@
                     <td>{{ item.id }}</td>
                     <td class="fw-bold">{{ item.name }}</td>
                     <td>
-                        {% if item.type == 'camera' %}
-                        <span class="badge bg-primary">Камера</span>
-                        {% elif item.type == 'light' %}
-                        <span class="badge bg-warning text-dark">Свет</span>
-                        {% elif item.type == 'prop' %}
-                        <span class="badge bg-secondary">Реквизит</span>
-                        {% elif item.type == 'consumable' %}
-                        <span class="badge bg-info text-dark">Расходники</span>
-                        {% else %}
-                        <span class="badge bg-dark">Другое</span>
+                        {% if item.type == 'camera' %} <span class="badge bg-primary">Камера</span>
+                        {% elif item.type == 'light' %} <span class="badge bg-warning text-dark">Свет</span>
+                        {% elif item.type == 'prop' %} <span class="badge bg-secondary">Реквизит</span>
+                        {% elif item.type == 'consumable' %} <span class="badge bg-info text-dark">Расходники</span>
+                        {% else %} <span class="badge bg-dark">Другое</span>
                         {% endif %}
                     </td>
                     <td>
                         {% if current_user.role in ['admin', 'teacher', 'employee'] %}
-                            
                             <form action="{{ url_for('toggle_equipment_status', id=item.id) }}" method="POST">
                                 {% if item.is_broken %}
-                                    <button type="submit" class="btn btn-sm btn-outline-danger border-0 fw-bold" title="Нажмите, чтобы отметить как ИСПРАВНОЕ">
-                                        ⚠ Сломано
-                                    </button>
+                                    <button type="submit" class="btn btn-sm btn-outline-danger border-0 fw-bold">⚠ Сломано</button>
                                 {% else %}
-                                    <button type="submit" class="btn btn-sm btn-outline-success border-0 fw-bold" title="Нажмите, чтобы отметить как СЛОМАННОЕ">
-                                        ✔ Исправно
-                                    </button>
+                                    <button type="submit" class="btn btn-sm btn-outline-success border-0 fw-bold">✔ Исправно</button>
                                 {% endif %}
                             </form>
-
                         {% else %}
                             {% if item.is_broken %}
                                 <span class="text-danger fw-bold">⚠ Сломано</span>
@@ -72,18 +119,22 @@
                             {% endif %}
                         {% endif %}
                     </td>
+                    
+                    {% if current_user.role in ['admin', 'teacher', 'employee'] %}
                     <td>
-                        {% if current_user.role in ['admin', 'teacher', 'employee'] %}
                         <form action="{{ url_for('delete_equipment', id=item.id) }}" method="POST"
                             onsubmit="return confirm('Вы уверены, что хотите удалить {{ item.name }}?');">
-                            <button type="submit" class="btn btn-sm btn-danger">🗑 Удалить</button>
+                            <button type="submit" class="btn btn-sm btn-danger">🗑</button>
                         </form>
-                        {% endif %}
                     </td>
+                    {% endif %}
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="5" class="text-center text-muted">База данных пуста. Добавьте первое оборудование.</td>
+                    <td colspan="5" class="text-center text-muted py-4">
+                        Ничего не найдено 😞 <br>
+                        <a href="/equipment" class="btn btn-link">Сбросить фильтры</a>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

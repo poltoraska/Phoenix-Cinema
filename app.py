@@ -195,10 +195,25 @@ def toggle_equipment_status(id):
 @app.route('/equipment')
 @login_required
 def equipment_list():
-    # Забираем всё оборудование из базы
-    items = Equipment.query.all()
-    return render_template('equipment.html', items=items)
+    # Получение параметров из URL
+    type_filter = request.args.get('type')
+    search_query = request.args.get('q')
 
+    # Запрос
+    query = Equipment.query
+
+    # Если выбрали тип (не "all" и не пустой), фильтр
+    if type_filter and type_filter != 'all':
+        query = query.filter_by(type=type_filter)
+
+    # Если что-то ввели в поиск, ищет по вхождению без учета регистра
+    if search_query:
+        query = query.filter(Equipment.name.ilike(f'%{search_query}%'))
+
+    # Сначала сломанные, чтобы их починить, потом по имени
+    items = query.order_by(Equipment.is_broken.desc(), Equipment.name).all()
+
+    return render_template('equipment.html', items=items, current_filter=type_filter, search_query=search_query)
 @app.route('/equipment/add', methods=['GET', 'POST'])
 @login_required
 def add_equipment():
