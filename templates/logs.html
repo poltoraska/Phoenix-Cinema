@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>🛡 Журнал событий </h2>
+</div>
+
+<div class="card shadow">
+    <div class="card-body p-0">
+        <table class="table table-striped mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Дата/Время</th>
+                    <th>Пользователь</th>
+                    <th>Действие</th>
+                    <th>Детали</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td class="text-nowrap">{{ log.timestamp.strftime('%d.%m.%Y %H:%M') }}</td>
+                    <td>
+                        <span class="fw-bold">{{ log.user.username }}</span>
+                        <small class="text-muted d-block">{{ log.user.role }}</small>
+                    </td>
+                    <td><span class="badge bg-secondary">{{ log.action }}</span></td>
+                    <td>{{ log.details }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center py-4 text-muted">История действий пуста.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -29,7 +29,13 @@
             <li class="nav-item"><a class="nav-link" href="/">Главная</a></li>
             <li class="nav-item"><a class="nav-link" href="/equipment">Оборудование</a></li>
             <li class="nav-item"><a class="nav-link" href="/projects">Проекты</a></li>
-          </ul>
+
+            {% if current_user.is_authenticated and current_user.role == 'admin' %}
+            <li class="nav-item border-start ms-2 ps-2">
+                <a class="nav-link text-warning fw-bold" href="/logs">🛡 Журнал</a>
+            </li>
+            {% endif %}
+            </ul>
 
           <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
             {% if current_user.is_authenticated %}

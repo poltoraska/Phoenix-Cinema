@@ -83,6 +83,24 @@ class Booking(db.Model):
     project = db.relationship('Project', backref='bookings')
     equipment = db.relationship('Equipment', backref='bookings')
 
+# Таблица 5: Логи действий пользователей
+class ActionLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    action = db.Column(db.String(50), nullable=False)  # Например: "Изменение статуса"
+    details = db.Column(db.String(255))                # Например: "Камера Sony A7 III -> Сломано"
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Связь с юзером, чтобы видеть имя
+    user = db.relationship('User', backref='logs')
+
+# Вспомогательная функция для быстрой записи лога
+def log_event(action, details):
+    if current_user.is_authenticated:
+        new_log = ActionLog(user_id=current_user.id, action=action, details=details)
+        db.session.add(new_log)
+        db.session.commit()
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -171,21 +189,28 @@ def logout():
 @app.route('/equipment/<int:id>/toggle_status', methods=['POST'])
 @login_required
 def toggle_equipment_status(id):
-    # Проверка прав как и при удалении
     if current_user.role not in ['admin', 'teacher', 'employee']:
         flash('У вас нет прав на изменение статуса!')
         return redirect(url_for('equipment_list'))
 
     item = Equipment.query.get_or_404(id)
     
-    # Меняет True на False и наоборот
+    # Меняем локально
     item.is_broken = not item.is_broken
     
     try:
         db.session.commit()
-        # Показывает разное сообщение в зависимости от того, что стало
+        
+        # Формируем текст
         status_text = "сломано" if item.is_broken else "исправно"
         flash(f'Статус обновлен: "{item.name}" теперь {status_text}.')
+
+        # --- ЛОГИРОВАНИЕ ---
+        # Пишет лог только если commit прошел успешно
+        log_status = "СЛОМАНО" if item.is_broken else "ИСПРАВНО"
+        log_event("Изменение статуса", f"Оборудование '{item.name}' отмечено как {log_status}")
+        # ---------------------------------
+
     except Exception as e:
         db.session.rollback()
         flash('Ошибка при обновлении статуса.')
@@ -356,7 +381,7 @@ def create_project():
             flash('Неверный формат даты')
             return redirect(url_for('create_project'))
 
-        # Создание проекта. Важно: запоминаем, КТО его создал (current_user.id)
+        # Создание проекта. Важно: запоминает, КТО его создал (current_user.id)
         new_project = Project(
             title=title, 
             description=description, 
@@ -378,6 +403,11 @@ def create_project():
         db.session.commit()
         
         flash(f'Проект "{title}" и съемочная группа успешно созданы!')
+        
+        # --- ЛОГИРОВАНИЕ ---
+        log_event("Создание проекта", f"Создан проект '{new_project.title}'")
+        # -------------------
+
         return redirect(url_for('project_list'))
     
     users = User.query.all()
@@ -434,16 +464,21 @@ def edit_project(id):
 def delete_project(id):
     project = Project.query.get_or_404(id)
 
-    # Защита: удалять может только создатель или админ
     if project.created_by != current_user.id and current_user.role != 'admin':
         flash('У вас нет прав удалять этот проект!')
         return redirect(url_for('project_list'))
 
     try:
-        # При удалении проекта удалятся и все бронирования
+        # 1. Запоминает название, пока проект еще существует
+        project_title = project.title 
+        
         db.session.delete(project)
         db.session.commit()
-        flash(f'Проект "{project.title}" удален.')
+        
+        # 2. Пишет лог ТОЛЬКО после успешного удаления
+        log_event("Удаление проекта", f"Удален проект '{project_title}'")
+        
+        flash(f'Проект "{project_title}" удален.')
     except Exception as e:
         db.session.rollback()
         flash('Ошибка при удалении проекта.')
@@ -566,6 +601,18 @@ def profile():
         return redirect(url_for('profile'))
 
     return render_template('profile.html', user=current_user)
+
+@app.route('/logs')
+@login_required
+def view_logs():
+    # Доступ только админу
+    if current_user.role != 'admin':
+        flash('Доступ запрещен')
+        return redirect(url_for('index'))
+    
+    # Показываем последние 50 действий, самые новые сверху
+    logs = ActionLog.query.order_by(ActionLog.timestamp.desc()).limit(50).all()
+    return render_template('logs.html', logs=logs)
 
 # --- ЗАПУСК ---
 if __name__ == '__main__':
